@@ -1,6 +1,7 @@
 package gematria
 
 import (
+	"errors"
 	"strings"
 )
 
@@ -73,15 +74,20 @@ func Load() Gematria {
 }
 
 // Get returns a string Gematria representation of a given integer.
-func (g Gematria) Get(m int) string {
-	_, result := g.getNextLetter(m, "")
+func (g Gematria) Get(m int) (string, error) {
+	_, result, err := g.getNextLetter(0, m, "")
 
-	//Sanitize exceptions
+	//Sanitize exceptions even on an error
 	result = sanatize(result)
-	return result
+
+	if err != nil {
+		return result, err
+	}
+
+	return result, nil
 }
 
-func (g Gematria) getNextLetter(m int, a string) (int, string) {
+func (g Gematria) getNextLetter(depth, m int, a string) (int, string, error) {
 	for i := len(g.orderedLetterArray) - 1; i >= 0; i-- {
 		if m >= g.letterValueMap[g.orderedLetterArray[i]] {
 			a += g.orderedLetterArray[i]
@@ -91,9 +97,13 @@ func (g Gematria) getNextLetter(m int, a string) (int, string) {
 	}
 
 	if m <= 0 {
-		return m, a
+		return m, a, nil
 	}
-	return g.getNextLetter(m, a)
+	depth++
+	if depth > 10 {
+		return m, a, errors.New("Gematria phrase length exceeds 10")
+	}
+	return g.getNextLetter(depth, m, a)
 }
 
 func sanatize(a string) string {
